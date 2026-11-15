@@ -1,0 +1,7 @@
+.stockflow-ai/
+__pycache__/
+*.pyc
+.env
+instanse/
+.pytest_cache/
+
