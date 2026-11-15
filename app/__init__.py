@@ -6,4 +6,9 @@ def create_app():
     @app.route("/")
     def home():
         return "StockFlow AI is running!"
+
+    @app.route("/about")
+    def about():
+        return "Addition Page"
+
     return app
