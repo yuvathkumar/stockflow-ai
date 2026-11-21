@@ -1,9 +1,10 @@
-from flask import flash, redirect, render_template, request, url_for
+from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from . import db
 from .auth import admin_required
 from .models import Product
+from .services import record_movement
 
 EMPTY_FORM = {"name": "", "quantity": "", "price": "", "reorder_level": 10}
 
@@ -54,6 +55,13 @@ def name_taken(name, exclude_id=None):
     return db.session.execute(query).first() is not None
 
 
+def get_active_product_or_404(product_id):
+    product = db.session.get(Product, product_id)
+    if product is None or not product.is_active:
+        abort(404)
+    return product
+
+
 def register_routes(app):
 
     @app.route("/")
@@ -74,7 +82,11 @@ def register_routes(app):
     @app.route("/products")
     @login_required
     def products():
-        query = db.select(Product).order_by(Product.name)
+        query = (
+            db.select(Product)
+            .where(Product.is_active.is_(True))
+            .order_by(Product.name)
+        )
         product_list = db.session.execute(query).scalars().all()
         return render_template("products.html", products=product_list)
 
@@ -93,9 +105,18 @@ def register_routes(app):
                     "product_form.html", title="Add product", values=request.form
                 ), 400
 
-            db.session.add(Product(**data))
+            product = Product(**data)
+            db.session.add(product)
+            if product.quantity > 0:
+                record_movement(
+                    product,
+                    current_user._get_current_object(),
+                    quantity_before=0,
+                    quantity_after=product.quantity,
+                    reason="initial stock",
+                )
             db.session.commit()
-            flash(f"Added {data['name']}.", "success")
+            flash(f"Added {product.name}.", "success")
             return redirect(url_for("products"))
 
         return render_template("product_form.html", title="Add product", values=EMPTY_FORM)
@@ -103,7 +124,7 @@ def register_routes(app):
     @app.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
     @admin_required
     def edit_product(product_id):
-        product = db.get_or_404(Product, product_id)
+        product = get_active_product_or_404(product_id)
 
         if request.method == "POST":
             data, errors = validate_product_form(request.form)
@@ -117,8 +138,18 @@ def register_routes(app):
                     "product_form.html", title="Edit product", values=request.form
                 ), 400
 
+            old_quantity = product.quantity
             for field, value in data.items():
                 setattr(product, field, value)
+
+            if product.quantity != old_quantity:
+                record_movement(
+                    product,
+                    current_user._get_current_object(),
+                    quantity_before=old_quantity,
+                    quantity_after=product.quantity,
+                    reason="manual adjustment",
+                )
             db.session.commit()
             flash(f"Updated {product.name}.", "success")
             return redirect(url_for("products"))
@@ -131,11 +162,11 @@ def register_routes(app):
         }
         return render_template("product_form.html", title="Edit product", values=values)
 
-    @app.route("/products/<int:product_id>/delete", methods=["POST"])
+    @app.route("/products/<int:product_id>/archive", methods=["POST"])
     @admin_required
-    def delete_product(product_id):
-        product = db.get_or_404(Product, product_id)
-        db.session.delete(product)
+    def archive_product(product_id):
+        product = get_active_product_or_404(product_id)
+        product.is_active = False
         db.session.commit()
-        flash(f"Deleted {product.name}.", "success")
+        flash(f"Archived {product.name}.", "success")
         return redirect(url_for("products"))

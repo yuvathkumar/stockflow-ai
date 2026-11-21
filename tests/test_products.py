@@ -65,13 +65,26 @@ def test_edit_product(admin_client):
     assert get_product("Sugar 5kg").quantity == 50
 
 
-def test_delete_product(admin_client):
+def test_archive_product(admin_client):
     product = get_product("Tea Powder 500g")
 
-    response = admin_client.post(f"/products/{product.id}/delete", follow_redirects=True)
+    response = admin_client.post(f"/products/{product.id}/archive", follow_redirects=True)
 
     assert response.status_code == 200
-    assert get_product("Tea Powder 500g") is None
+    assert b"Archived Tea Powder 500g" in response.data
+    assert get_product("Tea Powder 500g").is_active is False
+
+    listing = admin_client.get("/products")
+    assert b"Tea Powder 500g" not in listing.data
+
+
+def test_archived_product_cannot_be_edited(admin_client):
+    product = get_product("Tea Powder 500g")
+    admin_client.post(f"/products/{product.id}/archive")
+
+    response = admin_client.get(f"/products/{product.id}/edit")
+
+    assert response.status_code == 404
 
 
 def test_edit_missing_product_returns_404(admin_client):

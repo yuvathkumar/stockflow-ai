@@ -53,11 +53,11 @@ def test_staff_cannot_open_add_form(staff_client):
     assert response.status_code == 403
 
 
-def test_staff_cannot_delete_product(staff_client):
-    response = staff_client.post("/products/1/delete")
+def test_staff_cannot_archive_product(staff_client):
+    response = staff_client.post("/products/1/archive")
 
     assert response.status_code == 403
-    assert db.session.get(Product, 1) is not None
+    assert db.session.get(Product, 1).is_active is True
 
 
 def test_staff_does_not_see_admin_buttons(staff_client):

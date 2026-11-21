@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Orders – StockFlow AI{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Orders</h1>
+        <a href="{{ url_for('new_order') }}" class="btn btn-primary">+ New order</a>
+    </div>
+
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Date (UTC)</th>
+                <th>Created by</th>
+                <th>Items</th>
+                <th>Total (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td><a href="{{ url_for('order_detail', order_id=order.id) }}">#{{ order.id }}</a></td>
+                    <td>{{ order.created_at.strftime("%d %b %Y, %H:%M") }}</td>
+                    <td>{{ order.created_by.username }}</td>
+                    <td>{{ order.items|length }}</td>
+                    <td>{{ "%.2f"|format(order.total) }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">No orders yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

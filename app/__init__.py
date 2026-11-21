@@ -26,11 +26,13 @@ def create_app(test_config=None):
     login_manager.login_message_category = "warning"
 
     from .auth import register_auth_routes
+    from .orders import register_order_routes
     from .routes import register_routes
     from .seed import register_commands
 
     register_auth_routes(app)
     register_routes(app)
+    register_order_routes(app)
     register_commands(app)
 
     return app

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Stock history – StockFlow AI{% endblock %}
+
+{% block content %}
+    <h1>Stock history</h1>
+    <p class="text-muted">Every stock change, newest first. Records cannot be edited or deleted.</p>
+
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Date (UTC)</th>
+                <th>Product</th>
+                <th>Change</th>
+                <th>Before → After</th>
+                <th>Reason</th>
+                <th>By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for movement in movements %}
+                <tr>
+                    <td>{{ movement.created_at.strftime("%d %b %Y, %H:%M") }}</td>
+                    <td>{{ movement.product.name }}</td>
+                    <td class="{{ 'text-success' if movement.change > 0 else 'text-danger' }} fw-bold">
+                        {{ "%+d"|format(movement.change) }}
+                    </td>
+                    <td>{{ movement.quantity_before }} → {{ movement.quantity_after }}</td>
+                    <td>
+                        {{ movement.reason }}
+                        {% if movement.order_id %}
+                            (<a href="{{ url_for('order_detail', order_id=movement.order_id) }}">#{{ movement.order_id }}</a>)
+                        {% endif %}
+                    </td>
+                    <td>{{ movement.user.username if movement.user else "system" }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">No stock changes yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
