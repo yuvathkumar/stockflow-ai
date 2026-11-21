@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Forecast – StockFlow AI{% endblock %}
+
+{% block content %}
+    <h1>Stockout forecast</h1>
+    <p class="text-muted">
+        Based on orders from the last {{ window_days }} days.
+        Supplier lead time: {{ lead_time_days }} days.
+        Suggested reorders cover {{ lead_time_days + cover_days }} days of sales.
+    </p>
+
+    <table class="table table-striped mt-3 align-middle">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>In stock</th>
+                <th>Avg daily sales</th>
+                <th>Days until stockout</th>
+                <th>Est. stockout date</th>
+                <th>Suggested reorder</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.product.name }}</td>
+                    <td>{{ row.product.quantity }}</td>
+                    <td>{{ row.daily_demand }}</td>
+                    <td>{{ row.days_left if row.days_left is not none else "–" }}</td>
+                    <td>{{ row.stockout_date.strftime("%d %b %Y") if row.stockout_date else "–" }}</td>
+                    <td>{{ row.suggested_order or "–" }}</td>
+                    <td>
+                        {% if row.status == "critical" %}
+                            <span class="badge bg-danger">Critical</span>
+                        {% elif row.status == "warning" %}
+                            <span class="badge bg-warning text-dark">Warning</span>
+                        {% elif row.status == "ok" %}
+                            <span class="badge bg-success">OK</span>
+                        {% else %}
+                            <span class="badge bg-secondary">No sales data</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">No products yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

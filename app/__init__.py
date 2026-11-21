@@ -16,6 +16,13 @@ def create_app(test_config=None):
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///stockflow.db"
     app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
+    app.config["AI_PROVIDER"] = os.environ.get("AI_PROVIDER", "")
+    app.config["GEMINI_API_KEY"] = os.environ.get("GEMINI_API_KEY", "")
+    app.config["GEMINI_MODEL"] = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    app.config["OLLAMA_URL"] = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    app.config["OLLAMA_MODEL"] = os.environ.get("OLLAMA_MODEL", "llama3.2")
+    app.config["LLM_CLIENT"] = None
+
     if test_config:
         app.config.update(test_config)
 

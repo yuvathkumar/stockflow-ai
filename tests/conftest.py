@@ -10,6 +10,8 @@ def app():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "WTF_CSRF_ENABLED": False,
+        "AI_PROVIDER": "",
+        "LLM_CLIENT": None,
     })
     with app.app_context():
         db.create_all()

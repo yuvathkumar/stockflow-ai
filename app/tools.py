@@ -1,9 +1,12 @@
-from flask import Response, flash, redirect, render_template, request, url_for
+from flask import Response, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from . import db
+from .ai import AIError, ask_llm
+from .ask import AskError, answer_question
 from .auth import admin_required
 from .csv_io import parse_products_csv, products_to_csv
+from .forecast import COVER_DAYS, LEAD_TIME_DAYS, WINDOW_DAYS, forecast_products
 from .models import Product
 from .reports import inventory_summary, low_stock_products, monthly_sales, top_selling_products
 from .services import import_products
@@ -23,6 +26,35 @@ def register_tool_routes(app):
             months=monthly_sales(),
             low_stock=low_stock_products(),
         )
+
+    @app.route("/forecast")
+    @login_required
+    def forecast():
+        return render_template(
+            "forecast.html",
+            rows=forecast_products(),
+            window_days=WINDOW_DAYS,
+            lead_time_days=LEAD_TIME_DAYS,
+            cover_days=COVER_DAYS,
+        )
+
+    @app.route("/ask", methods=["GET", "POST"])
+    @admin_required
+    def ask():
+        if request.method == "POST":
+            question = request.form.get("question", "")
+            llm = current_app.config.get("LLM_CLIENT") or ask_llm
+            try:
+                result = answer_question(question, llm)
+            except AIError as error:
+                flash(str(error), "warning")
+                return render_template("ask.html", question=question, result=None), 503
+            except AskError as error:
+                flash(str(error), "danger")
+                return render_template("ask.html", question=question, result=None), 400
+            return render_template("ask.html", question=question, result=result)
+
+        return render_template("ask.html", question="", result=None)
 
     @app.route("/products/export.csv")
     @login_required
