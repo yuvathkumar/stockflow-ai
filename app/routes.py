@@ -3,10 +3,13 @@ from flask_login import current_user, login_required
 
 from . import db
 from .auth import admin_required
+from .forecast import forecast_products
 from .models import Product
+from .reports import inventory_summary
 from .services import record_movement
 
 EMPTY_FORM = {"name": "", "quantity": "", "price": "", "reorder_level": 10}
+ATTENTION_LIMIT = 5
 
 
 def validate_product_form(form):
@@ -62,18 +65,28 @@ def get_active_product_or_404(product_id):
     return product
 
 
+def needs_attention(row):
+    if row["status"] in ("critical", "warning"):
+        return True
+    return row["status"] == "no data" and row["product"].is_low_stock
+
+
 def register_routes(app):
 
     @app.route("/")
     def home():
-        features = [
-            "Product and stock management",
-            "Orders with automatic stock updates",
-            "Stockout prediction",
-            "Ask questions in plain English",
-        ]
-        user_name = current_user.username if current_user.is_authenticated else "Guest"
-        return render_template("home.html", user_name=user_name, features=features)
+        if not current_user.is_authenticated:
+            return render_template("home.html")
+
+        forecast_rows = forecast_products()
+        attention = [row for row in forecast_rows if needs_attention(row)][:ATTENTION_LIMIT]
+        critical_count = sum(1 for row in forecast_rows if row["status"] == "critical")
+        return render_template(
+            "home.html",
+            summary=inventory_summary(),
+            attention=attention,
+            critical_count=critical_count,
+        )
 
     @app.route("/about")
     def about():

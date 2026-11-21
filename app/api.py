@@ -1,11 +1,13 @@
 from functools import wraps
 
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 from flask_login import current_user
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import db
+from .ai import AIError, ask_llm
+from .ask import AskError, answer_question
 from .models import Product
 from .reports import inventory_summary
 
@@ -76,3 +78,18 @@ def register_api_routes(app):
     @api_admin_required
     def api_summary():
         return jsonify(inventory_summary())
+
+    @app.route("/api/ask", methods=["POST"])
+    @api_admin_required
+    def api_ask():
+        payload = request.get_json(silent=True) or {}
+        question = payload.get("question", "")
+        llm = current_app.config.get("LLM_CLIENT") or ask_llm
+
+        try:
+            result = answer_question(question, llm)
+        except AIError as error:
+            return jsonify(error=str(error)), 503
+        except AskError as error:
+            return jsonify(error=str(error)), 400
+        return jsonify(result)

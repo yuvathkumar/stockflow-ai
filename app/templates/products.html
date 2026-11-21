@@ -3,56 +3,101 @@
 {% block title %}Products – StockFlow AI{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center">
-        <h1>Products</h1>
+    <div class="sf-page-header">
         <div>
-            <a href="{{ url_for('export_products') }}" class="btn btn-outline-secondary">Export CSV</a>
+            <h1 class="mb-1">Products</h1>
+            <p class="text-muted mb-0">{{ products|length }} active products</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('export_products') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
             {% if current_user.is_admin %}
-                <a href="{{ url_for('import_products') }}" class="btn btn-outline-secondary">Import CSV</a>
+                <a href="{{ url_for('import_products') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-upload"></i> Import CSV
+                </a>
                 <a href="{{ url_for('new_product') }}" class="btn btn-primary">+ Add product</a>
             {% endif %}
         </div>
     </div>
 
-    <table class="table table-striped mt-3">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Quantity</th>
-                <th>Price (₹)</th>
-                <th>Reorder level</th>
-                {% if current_user.is_admin %}<th>Actions</th>{% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for product in products %}
-                <tr>
-                    <td>{{ product.name }}</td>
-                    <td>
-                        {{ product.quantity }}
+    <div class="sf-toolbar">
+        <div class="input-group sf-search">
+            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+            <input type="search" id="product-search" class="form-control border-start-0"
+                   placeholder="Search products…" aria-label="Search products">
+        </div>
+        <div class="btn-group" role="group" aria-label="Filter products">
+            <button type="button" class="btn btn-outline-primary active" data-filter="all">All</button>
+            <button type="button" class="btn btn-outline-primary" data-filter="low">
+                <i class="bi bi-exclamation-triangle"></i> Low stock
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4">
+        {% for product in products %}
+            {% set stock_percent = [((product.quantity / ([product.reorder_level, 1]|max * 3)) * 100)|round|int, 100]|min %}
+            <div class="col" data-product-card
+                 data-name="{{ product.name|lower }}"
+                 data-low="{{ 'true' if product.is_low_stock else 'false' }}">
+                <div class="sf-card sf-hover h-100 p-3 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="sf-avatar avatar-{{ product.id % 6 }}">{{ product.name[0]|upper }}</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <h3 class="h6 mb-0 text-truncate" title="{{ product.name }}">{{ product.name }}</h3>
+                            <div class="small text-muted">Reorder at {{ product.reorder_level }}</div>
+                        </div>
                         {% if product.is_low_stock %}
-                            <span class="badge bg-danger">Low stock</span>
+                            <span class="badge rounded-pill text-bg-danger">Low stock</span>
                         {% endif %}
-                    </td>
-                    <td>{{ "%.2f"|format(product.price) }}</td>
-                    <td>{{ product.reorder_level }}</td>
+                    </div>
+
+                    <div class="sf-price mb-2">₹{{ "{:,.2f}".format(product.price) }}</div>
+
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">In stock</span>
+                        <span class="fw-semibold">{{ product.quantity }}</span>
+                    </div>
+                    <div class="progress sf-progress mb-3" role="progressbar" aria-label="Stock level"
+                         aria-valuenow="{{ stock_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar {{ 'bg-danger' if product.is_low_stock else 'bg-success' }}"
+                             style="width: {{ stock_percent }}%"></div>
+                    </div>
+
                     {% if current_user.is_admin %}
-                        <td>
+                        <div class="mt-auto d-flex gap-2">
                             <a href="{{ url_for('edit_product', product_id=product.id) }}"
-                               class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <form method="post"
+                               class="btn btn-sm btn-outline-secondary flex-fill">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <form method="post" class="flex-fill"
                                   action="{{ url_for('archive_product', product_id=product.id) }}"
-                                  class="d-inline"
                                   onsubmit="return confirm('Archive this product?');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Archive</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                    <i class="bi bi-archive"></i> Archive
+                                </button>
                             </form>
-                        </td>
+                        </div>
                     {% endif %}
-                </tr>
-            {% else %}
-                <tr><td colspan="5">No products yet.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="sf-card sf-empty">
+                    <i class="bi bi-box-seam"></i>
+                    <p class="mb-3">No products yet.</p>
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('new_product') }}" class="btn btn-primary">+ Add your first product</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="no-results" class="sf-empty" hidden>
+        <i class="bi bi-search"></i>
+        No products match your search.
+    </div>
 {% endblock %}

@@ -1,15 +1,188 @@
 {% extends "base.html" %}
 
-{% block title %}Home – StockFlow AI{% endblock %}
+{% block title %}{{ "Dashboard" if current_user.is_authenticated else "Home" }} – StockFlow AI{% endblock %}
 
 {% block content %}
-    <h1>StockFlow AI is running!</h1>
-    <p class="lead">Welcome, {{ user_name }}.</p>
+{% if current_user.is_authenticated %}
 
-    <h4 class="mt-4">Coming soon</h4>
-    <ul class="list-group">
-        {% for feature in features %}
-            <li class="list-group-item">{{ feature }}</li>
+    <div class="sf-page-header">
+        <div>
+            <h1 class="mb-1">Welcome back, {{ current_user.username }} 👋</h1>
+            <p class="text-muted mb-0">Here's what's happening with your inventory.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" href="{{ url_for('new_order') }}"><i class="bi bi-plus-lg"></i> New order</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('products') }}"><i class="bi bi-box-seam"></i> Products</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-6 col-lg-3">
+            <div class="sf-card sf-hover p-3 h-100 d-flex align-items-center gap-3">
+                <div class="sf-icon tint-primary"><i class="bi bi-box-seam"></i></div>
+                <div class="min-w-0">
+                    <div class="small text-muted">Active products</div>
+                    <div class="sf-kpi-value">{{ summary.total_products }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sf-card sf-hover p-3 h-100 d-flex align-items-center gap-3">
+                <div class="sf-icon tint-danger"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="min-w-0">
+                    <div class="small text-muted">Low stock</div>
+                    <div class="sf-kpi-value">{{ summary.low_stock_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sf-card sf-hover p-3 h-100 d-flex align-items-center gap-3">
+                <div class="sf-icon tint-info"><i class="bi bi-receipt"></i></div>
+                <div class="min-w-0">
+                    <div class="small text-muted">Orders</div>
+                    <div class="sf-kpi-value">{{ summary.order_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            {% if current_user.is_admin %}
+                <div class="sf-card sf-hover p-3 h-100 d-flex align-items-center gap-3">
+                    <div class="sf-icon tint-success"><i class="bi bi-currency-rupee"></i></div>
+                    <div class="min-w-0">
+                        <div class="small text-muted">Revenue</div>
+                        <div class="sf-kpi-value text-truncate">₹{{ "{:,.0f}".format(summary.revenue) }}</div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="sf-card sf-hover p-3 h-100 d-flex align-items-center gap-3">
+                    <div class="sf-icon tint-warning"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="min-w-0">
+                        <div class="small text-muted">Running out soon</div>
+                        <div class="sf-kpi-value">{{ critical_count }}</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-lg-8">
+            <div class="sf-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0"><i class="bi bi-bell text-danger"></i> Needs attention</h2>
+                    <a href="{{ url_for('forecast') }}" class="small text-decoration-none">View forecast <i class="bi bi-arrow-right"></i></a>
+                </div>
+
+                {% for row in attention %}
+                    <div class="d-flex align-items-center gap-3 py-2 {{ 'border-top' if not loop.first }}">
+                        <div class="sf-avatar avatar-{{ row.product.id % 6 }}">{{ row.product.name[0]|upper }}</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold text-truncate">{{ row.product.name }}</div>
+                            <div class="small text-muted">
+                                {{ row.product.quantity }} in stock
+                                {% if row.days_left is not none %} · about {{ row.days_left }} days left{% endif %}
+                                {% if row.suggested_order %} · reorder {{ row.suggested_order }}{% endif %}
+                            </div>
+                        </div>
+                        {% if row.status == "critical" %}
+                            <span class="badge rounded-pill text-bg-danger">Critical</span>
+                        {% elif row.status == "warning" %}
+                            <span class="badge rounded-pill text-bg-warning">Warning</span>
+                        {% else %}
+                            <span class="badge rounded-pill text-bg-danger">Low stock</span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="sf-empty">
+                        <i class="bi bi-check-circle text-success"></i>
+                        All products are well stocked.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sf-card p-4 h-100">
+                <h2 class="h5 mb-3"><i class="bi bi-lightning-charge text-warning"></i> Quick actions</h2>
+                <div class="d-grid gap-2">
+                    <a class="btn btn-outline-primary text-start" href="{{ url_for('new_order') }}"><i class="bi bi-cart-plus"></i> Create an order</a>
+                    <a class="btn btn-outline-primary text-start" href="{{ url_for('forecast') }}"><i class="bi bi-graph-up-arrow"></i> Check the forecast</a>
+                    <a class="btn btn-outline-primary text-start" href="{{ url_for('export_products') }}"><i class="bi bi-download"></i> Export products (CSV)</a>
+                    {% if current_user.is_admin %}
+                        <a class="btn btn-outline-primary text-start" href="{{ url_for('new_product') }}"><i class="bi bi-plus-square"></i> Add a product</a>
+                        <a class="btn btn-outline-primary text-start" href="{{ url_for('reports') }}"><i class="bi bi-bar-chart-line"></i> View reports</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+
+    {% set features = [
+        ("box-seam", "Product management", "Add, edit and archive products with built-in validation."),
+        ("cart-check", "Safe orders", "Stock updates automatically, and orders never oversell."),
+        ("graph-up-arrow", "Stockout prediction", "See how many days of stock you have left, and what to reorder."),
+        ("stars", "Ask Flo", "Ask questions about your data in plain English."),
+        ("clock-history", "Full audit trail", "Every stock change records who, when and why."),
+        ("file-earmark-spreadsheet", "CSV import & export", "Move data in and out of Excel in seconds."),
+    ] %}
+
+    <section class="sf-hero">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <span class="badge rounded-pill bg-white text-brand mb-3 px-3 py-2">
+                    <i class="bi bi-stars"></i> AI-powered inventory
+                </span>
+                <h1 class="fw-bold">Never run out of stock again.</h1>
+                <p class="lead opacity-75 mb-4">
+                    StockFlow AI tracks products and orders, predicts stockouts before they happen,
+                    and answers questions about your data in plain English.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-light btn-lg text-brand fw-semibold" href="{{ url_for('login') }}">
+                        <i class="bi bi-box-arrow-in-right"></i> Log in
+                    </a>
+                    <a class="btn btn-outline-light btn-lg" href="{{ url_for('about') }}">Learn more</a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block">
+                <div class="sf-card p-3 text-dark">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="sf-avatar avatar-3">S</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Sugar 5kg</div>
+                            <div class="small text-muted">About 4 days left · reorder 34</div>
+                        </div>
+                        <span class="badge rounded-pill text-bg-danger">Critical</span>
+                    </div>
+                </div>
+                <div class="sf-card p-3 text-dark mt-3 ms-5">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="sf-avatar avatar-1">R</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Rice 25kg</div>
+                            <div class="small text-muted">About 13 days left · reorder 23</div>
+                        </div>
+                        <span class="badge rounded-pill text-bg-warning">Warning</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <h2 class="h4 mt-5 mb-3">Everything you need to manage stock</h2>
+    <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3">
+        {% for icon, title, text in features %}
+            <div class="col">
+                <div class="sf-card sf-hover p-4 h-100">
+                    <div class="sf-icon tint-primary mb-3"><i class="bi bi-{{ icon }}"></i></div>
+                    <h3 class="h6 fw-semibold">{{ title }}</h3>
+                    <p class="text-muted small mb-0">{{ text }}</p>
+                </div>
+            </div>
         {% endfor %}
-    </ul>
+    </div>
+
+{% endif %}
 {% endblock %}

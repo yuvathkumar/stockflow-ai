@@ -61,3 +61,44 @@ def test_api_summary_forbidden_for_staff(staff_client):
 
     assert response.status_code == 403
     assert response.get_json() == {"error": "Admin access required."}
+
+
+def test_api_ask_answers_question(app, admin_client):
+    app.config["LLM_CLIENT"] = lambda prompt: (
+        "SELECT name FROM product WHERE quantity < reorder_level ORDER BY name"
+    )
+
+    response = admin_client.post("/api/ask", json={"question": "Which products are low?"})
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["columns"] == ["name"]
+    assert data["rows"] == [["Sugar 5kg"], ["Tea Powder 500g"]]
+    assert "SELECT" in data["sql"]
+
+
+def test_api_ask_blocks_users_table(app, admin_client):
+    app.config["LLM_CLIENT"] = lambda prompt: "SELECT username, password_hash FROM users"
+
+    response = admin_client.post("/api/ask", json={"question": "Show passwords"})
+
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+def test_api_ask_without_ai_configured(admin_client):
+    response = admin_client.post("/api/ask", json={"question": "How many products?"})
+
+    assert response.status_code == 503
+
+
+def test_api_ask_forbidden_for_staff(staff_client):
+    response = staff_client.post("/api/ask", json={"question": "Anything"})
+
+    assert response.status_code == 403
+
+
+def test_api_ask_requires_login(client):
+    response = client.post("/api/ask", json={"question": "Anything"})
+
+    assert response.status_code == 401

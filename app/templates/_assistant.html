@@ -1,0 +1,35 @@
+<button type="button" class="flo-fab" id="flo-toggle" aria-controls="flo-panel" aria-expanded="false">
+    <i class="bi bi-stars"></i><span>Ask Flo</span>
+</button>
+
+<section class="flo-panel" id="flo-panel" role="dialog" aria-label="Flo, your StockFlow assistant" hidden>
+    <header class="flo-header">
+        <div class="flo-avatar"><i class="bi bi-stars"></i></div>
+        <div class="flex-grow-1">
+            <div class="fw-semibold">Flo</div>
+            <div class="small opacity-75">Your StockFlow assistant</div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" id="flo-close" aria-label="Close"></button>
+    </header>
+
+    <div class="flo-messages" id="flo-messages" aria-live="polite">
+        <div class="flo-msg bot">
+            Hi {{ current_user.username }}! 👋 I'm Flo. Ask me anything about your stock, orders or sales.
+        </div>
+        <div class="flo-suggestions">
+            <button type="button" class="flo-chip" data-question="Which products are below their reorder level?">Low-stock products</button>
+            <button type="button" class="flo-chip" data-question="Total revenue by month">Revenue by month</button>
+            <button type="button" class="flo-chip" data-question="Top 3 products by units sold">Top sellers</button>
+        </div>
+    </div>
+
+    <form class="flo-form" id="flo-form">
+        <input class="form-control" id="flo-input" maxlength="500" autocomplete="off"
+               placeholder="Ask Flo a question…" aria-label="Your question" required>
+        <button class="btn btn-primary" type="submit" aria-label="Send">
+            <i class="bi bi-send-fill"></i>
+        </button>
+    </form>
+</section>
+
+<script src="{{ url_for('static', filename='js/assistant.js') }}" defer></script>
