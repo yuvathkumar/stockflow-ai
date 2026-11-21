@@ -1,0 +1,8 @@
+.stockflow-ai/
+.venv/
+.git/
+instance/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env

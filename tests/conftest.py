@@ -12,6 +12,7 @@ def app():
         "WTF_CSRF_ENABLED": False,
         "AI_PROVIDER": "",
         "LLM_CLIENT": None,
+        "PASSWORD_HASH_METHOD": "pbkdf2:sha256:1000",
     })
     with app.app_context():
         db.create_all()

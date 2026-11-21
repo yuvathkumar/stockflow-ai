@@ -2,6 +2,8 @@ from functools import wraps
 
 from flask import jsonify, request
 from flask_login import current_user
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import db
 from .models import Product
@@ -42,6 +44,14 @@ def product_to_dict(product):
 
 
 def register_api_routes(app):
+
+    @app.route("/health")
+    def health():
+        try:
+            db.session.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            return jsonify(status="error", database="unreachable"), 503
+        return jsonify(status="ok", database="ok")
 
     @app.route("/api/products")
     @api_login_required
