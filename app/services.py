@@ -1,4 +1,4 @@
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from . import db
 from .models import Order, OrderItem, Product, StockMovement
@@ -73,3 +73,41 @@ def place_order(user, quantities):
         raise
 
     return order
+
+
+def import_products(rows, user):
+    """Create new products or update existing ones. All rows succeed, or nothing changes.
+
+    Returns (created_count, updated_count).
+    """
+    created = 0
+    updated = 0
+
+    try:
+        for data in rows:
+            query = select(Product).filter_by(name=data["name"])
+            product = db.session.execute(query).scalar_one_or_none()
+
+            if product is None:
+                product = Product(**data)
+                db.session.add(product)
+                if product.quantity > 0:
+                    record_movement(product, user, 0, product.quantity, "csv import")
+                created += 1
+            else:
+                old_quantity = product.quantity
+                for field, value in data.items():
+                    setattr(product, field, value)
+                product.is_active = True
+                if product.quantity != old_quantity:
+                    record_movement(
+                        product, user, old_quantity, product.quantity, "csv import"
+                    )
+                updated += 1
+
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    return created, updated

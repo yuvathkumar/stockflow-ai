@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Import products – StockFlow AI{% endblock %}
+
+{% block content %}
+    <h1>Import products from CSV</h1>
+
+    <p>Upload a CSV file with these columns:</p>
+    <pre class="bg-light p-3 border rounded">name,quantity,price,reorder_level
+Salt 1kg,30,25,10
+Rice 25kg,100,1250,15</pre>
+    <ul>
+        <li>Products with a <strong>new name</strong> are created.</li>
+        <li>Products with an <strong>existing name</strong> are updated.</li>
+        <li>If any row has an error, <strong>nothing is imported</strong>.</li>
+        <li>Maximum file size: 1 MB.</li>
+    </ul>
+
+    <form method="post" enctype="multipart/form-data" class="mt-3" style="max-width: 480px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+            <input type="file" class="form-control" name="file" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Import</button>
+        <a href="{{ url_for('products') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}

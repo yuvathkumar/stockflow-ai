@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Reports – StockFlow AI{% endblock %}
+
+{% block content %}
+    <h1>Reports</h1>
+
+    <div class="row g-3 mt-2">
+        <div class="col-6 col-md">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Active products</div>
+                <div class="fs-3 fw-bold">{{ summary.total_products }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Stock value (₹)</div>
+                <div class="fs-3 fw-bold">{{ "%.2f"|format(summary.stock_value) }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Low-stock items</div>
+                <div class="fs-3 fw-bold text-danger">{{ summary.low_stock_count }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Orders</div>
+                <div class="fs-3 fw-bold">{{ summary.order_count }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Revenue (₹)</div>
+                <div class="fs-3 fw-bold">{{ "%.2f"|format(summary.revenue) }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h4>Top-selling products</h4>
+            <table class="table table-sm">
+                <thead><tr><th>Product</th><th>Units sold</th><th>Revenue (₹)</th></tr></thead>
+                <tbody>
+                    {% for row in top_products %}
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.quantity_sold }}</td>
+                            <td>{{ "%.2f"|format(row.revenue) }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3">No sales yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h4>Monthly sales</h4>
+            <table class="table table-sm">
+                <thead><tr><th>Month</th><th>Orders</th><th>Revenue (₹)</th></tr></thead>
+                <tbody>
+                    {% for row in months %}
+                        <tr>
+                            <td>{{ row.month }}</td>
+                            <td>{{ row.orders }}</td>
+                            <td>{{ "%.2f"|format(row.revenue) }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3">No sales yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h4 class="mt-4">Low-stock products</h4>
+    <table class="table table-sm">
+        <thead><tr><th>Product</th><th>Quantity</th><th>Reorder level</th></tr></thead>
+        <tbody>
+            {% for product in low_stock %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td class="text-danger fw-bold">{{ product.quantity }}</td>
+                    <td>{{ product.reorder_level }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="3">All products are above their reorder level.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
